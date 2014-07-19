@@ -1,6 +1,7 @@
 $:.unshift File.join(File.dirname(__FILE__), '..', 'lib')
 require 'rspec'
 require 'progress'
+require 'csv'
 
 describe Progress do
 
@@ -175,6 +176,14 @@ describe Progress do
             end
           end
 
+          it "should call each only once for CSV" do
+            enum = CSV.open(__FILE__)
+            enum.should_receive(:each).once.and_return(enum)
+            without_warnings do
+              enum.with_progress.each{ }.should == enum
+            end
+          end
+          
         end
       end
     end
