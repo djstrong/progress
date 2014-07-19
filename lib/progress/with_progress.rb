@@ -42,9 +42,17 @@ class Progress
     end
 
     def run(method, *args, &block)
-      enumerable = case
+      use_pos = false
+      
+      enumerable, length = case
       when @length
-        @enumerable
+        [@enumerable, @length]
+      when @enumerable.respond_to?(:size) && @enumerable.respond_to?(:pos)
+        use_pos = true
+        [@enumerable, @enumerable.size]
+      when @enumerable.respond_to?(:stat) && @enumerable.stat.respond_to?(:size) && @enumerable.respond_to?(:pos)
+        use_pos = true
+        [@enumerable, @enumerable.stat.size]
       when
             @enumerable.is_a?(String),
             @enumerable.is_a?(IO),
@@ -53,31 +61,24 @@ class Progress
         warn "Progress: collecting elements for instance of class #{@enumerable.class}"
         lines = []
         @enumerable.each{ |line| lines << line }
-        lines
+        [lines, lines.size]
       else
-        @enumerable
+        length = case
+          when @enumerable.respond_to?(:size)
+            @enumerable.size
+          when @enumerable.respond_to?(:length)
+            @enumerable.length
+          else
+            @enumerable.count
+          end
+        [@enumerable, length]
       end
 
-      csv = false
-      
-      length = case
-      when @length
-        @length
-      when enumerable.respond_to?(:size)
-        enumerable.size
-      when enumerable.respond_to?(:length)
-        enumerable.length
-      when Object.const_defined?(:CSV) && @enumerable.is_a?(CSV)
-        csv = true
-        enumerable.stat.size
-      else
-        enumerable.count
-      end
 
       if block
         result = Progress.start(@title, length) do
           enumerable.send(method, *args) do |*block_args|
-            if csv
+            if use_pos
               Progress.set(enumerable.pos) do
                 block.call(*block_args)
               end
