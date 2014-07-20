@@ -163,8 +163,7 @@ describe Progress do
 
           it "should call each only once for File (IO)" do
             enum = File.open(__FILE__)
-            enum.should_receive(:each).once.and_call_original
-            enum.should_receive(:pos).at_least(:once).and_call_original
+            enum.should_receive(:each).once.and_return(enum)
             without_warnings do
               enum.with_progress.each{ }.should == enum
             end
