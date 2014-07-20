@@ -2,6 +2,7 @@ $:.unshift File.join(File.dirname(__FILE__), '..', 'lib')
 require 'rspec'
 require 'progress'
 require 'csv'
+require 'tempfile'
 
 describe Progress do
 
@@ -162,7 +163,8 @@ describe Progress do
 
           it "should call each only once for File (IO)" do
             enum = File.open(__FILE__)
-            enum.should_receive(:each).once.and_return(enum)
+            enum.should_receive(:each).once.and_call_original
+            enum.should_receive(:pos).at_least(:once).and_call_original
             without_warnings do
               enum.with_progress.each{ }.should == enum
             end
@@ -185,6 +187,28 @@ describe Progress do
           end
           
         end
+        
+        describe "use current offset" do
+          
+          it "should call size and pos for File (IO)" do
+            enum = File.open(__FILE__)
+            enum.should_receive(:size).once.and_call_original
+            enum.should_receive(:pos).at_least(:once).and_call_original
+            enum.with_progress{ }
+          end
+          
+          it "should call size and pos for CSV" do
+            file = Tempfile.new('foo')
+            file.write("a\nb\nc")
+            file.close
+            enum = CSV.open(file.path)
+            enum.should_receive(:stat).at_least(:once).and_call_original
+            enum.should_receive(:pos).at_least(:once).and_call_original
+            enum.with_progress{}
+            file.unlink
+          end
+        end
+        
       end
     end
 
